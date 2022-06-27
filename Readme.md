@@ -31,7 +31,7 @@ docker run --gpus '"device=0"' -v /data0:/data0 --shm-size 128g  -v /home:/home 
 	- 利用TensorRT加速技术实现在半精度模式下的运算性能提升，并且控制精度损失在合理范围内
 	- 本方法基于torch_tensorrt进行开发，可以直接将pytorch模型的底层计算过程直接迁移到TensorRT上，让用户在使用pytorch接口的同时可以使用TensorRT提高模型推理速度，相对于传统onnx转换tensort方法，本方法对用户更加方便快捷，降低用户的开发量。**这一点也是我们本次工作的核心亮点**
 	
-	![image-20220627221651619](main\img\torch_tensorrt_transform.png)
+	![torch_tensorrt_transform](img\torch_tensorrt_transform.png)
 	
 	- 提供了在Docker中的代码编译、运行步骤的完整说明
 
@@ -55,11 +55,11 @@ docker run --gpus '"device=0"' -v /data0:/data0 --shm-size 128g  -v /home:/home 
 
 - **模型的总体结构**
 
-![image-20220624100052563](main\img\mask2former_network.png)
+![mask2former_network](img\mask2former_network.png)
 
-![image-20220627192754260](main\img\mask2former_exp1.png)
+![mask2former_exp1](img\mask2former_exp1.png)
 
-![image-20220627192807221](main\img\mask2former_exp2.png)
+![mask2former_exp2](img\mask2former_exp2.png)
 
 ​	
 
