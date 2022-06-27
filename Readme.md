@@ -1,37 +1,13 @@
 ## 总述
 
 - **优化模型名称**：[**Masked-attention Mask Transformer for Universal Image Segmentation**](https://github.com/facebookresearch/Mask2Former.git) 
-- **模型优化效果**：
-- **Quick Start**：
-
-​	Step1. 下载我们所集成好的镜像
-
-```shell
-docker pull p517332051/nvidia_trt_test:v4
-```
-
-​	Step2.  启动docker镜像运行程序
-
-```shell
-#!/bin/bash
-set -x
-set -e
-
-ROOT_DIR=$(cd "$(dirname "$0")";pwd)
-
-DOCKER_IMAGE="p517332051/nvidia_trt_testi:v1"
-
-export NV_GPU="0,1,2,3,4,5,6,7"
-
-docker run --gpus '"device=0"' -v /data0:/data0 --shm-size 128g  -v /home:/home -it  $DOCKER_IMAGE bash
-```
 
 - 项目主要贡献
 	- 基于TensorRT 在Nvidia GPU 平台实现了Mask2Former模型的转换和加速
 	- 利用TensorRT加速技术实现在半精度模式下的运算性能提升，并且控制精度损失在合理范围内
-	- 本方法基于torch_tensorrt进行开发，可以直接将pytorch模型的底层计算过程直接迁移到TensorRT上，让用户在使用pytorch接口的同时可以使用TensorRT提高模型推理速度，相对于传统onnx转换tensort方法，本方法对用户更加方便快捷，降低用户的开发量。**这一点也是我们本次工作的核心亮点**
+	- **本方法基于torch_tensorrt进行开发，可以直接将pytorch模型的底层计算过程直接迁移到TensorRT上，让用户在使用pytorch接口的同时可以使用TensorRT提高模型推理速度，相对于传统onnx转换tensort方法，本方法对用户更加方便快捷，降低用户的开发量**。对于未来工程化部署提供了一种思路，而这一点也是我们本次工作的核心亮点
 	
-	![torch_tensorrt_transform](img/torch_tensorrt_transform.png)
+	![image-20220627221651619](img/torch_tensorrt_transform.png)
 	
 	- 提供了在Docker中的代码编译、运行步骤的完整说明
 
@@ -55,11 +31,11 @@ docker run --gpus '"device=0"' -v /data0:/data0 --shm-size 128g  -v /home:/home 
 
 - **模型的总体结构**
 
-![mask2former_network](img/mask2former_network.png)
+![image-20220624100052563](img/mask2former_network.png)
 
-![mask2former_exp1](img/mask2former_exp1.png)
+![image-20220627192754260](img/mask2former_exp1.png)
 
-![mask2former_exp2](img/mask2former_exp2.png)
+![image-20220627192807221](img/mask2former_exp2.png)
 
 ​	
 
@@ -105,24 +81,66 @@ docker run --gpus '"device=0"' -v /data0:/data0 --shm-size 128g  -v /home:/home 
 	- 将deformableAttn所需要的reference_point提前计算完毕
 	- 防止模型重复计算
 
+
+
+## 	优化效果
+
+### 性能和精度对比
+
+|     模型     | Tensorrt版本 | GPU  | 精度类型 | 耗时  | 绝对误差 | 相对误差 |
+| :----------: | :----------: | :--: | :------: | :---: | :------: | :------: |
+| Torch_script |    8.4GA     | A10  |   FP32   | 326ms |    —     |    —     |
+|     Ours     |    8.4GA     | A10  |   FP32   | 283ms |   4e-2   |   6e-4   |
+
+
+
+## 代码运行流程
+
+- 搭建docker运行环境
+
+	```shell
+	docker pull p517332051/nvidia_trt_test:v4
+	```
+
+- 启动docker镜像
+
+	```shell
+	#!/bin/bash
+	set -x
+	set -e
 	
-
-	## 优化效果
-
-	### 性能和精度对比
-
-	|     模型     | Tensorrt版本 | GPU  | 精度类型 | 耗时  | 绝对误差 | 相对误差 |
-	| :----------: | :----------: | :--: | :------: | :---: | :------: | :------: |
-	| Torch_script |    8.4GA     | A10  |   FP32   | 326ms |    —     |    —     |
-	|     Ours     |    8.4GA     | A10  |   FP32   | 283ms |   4e-2   |   6e-4   |
-
+	ROOT_DIR=$(cd "$(dirname "$0")";pwd)
 	
+	DOCKER_IMAGE="p517332051/nvidia_trt_testi:v1"
+	
+	export NV_GPU="0,1,2,3,4,5,6,7"
+	
+	docker run --gpus '"device=0"' -v /data0:/data0 --shm-size 128g  -v /home:/home -it  $DOCKER_IMAGE bash
+	```
 
+- 激活编译环境
 
+	```shell
+	conda activate wenet
+	```
 
+- 进入相应目录并编译TensorRT相关库
 
+	```shell
+	cd /workspace/Torch-TensorRT-universe
+	mkdir build
+	cd build
+	cmake -DCMAKE_BUILD_TYPE=RELEASE ..
+	make -j8
+	```
 
+- 运行测试脚本
 
+	```shell
+	sh /workspace/Mask2Former/run_test.sh
+	```
+
+	（这里运行的测试结果为做5次前向的时间~）
 
 
 
