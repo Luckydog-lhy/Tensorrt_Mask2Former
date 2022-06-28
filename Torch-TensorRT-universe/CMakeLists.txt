@@ -304,6 +304,7 @@ FILE(GLOB TORCHTRT_PLUGIN_KERNEL
         ${PROJECT_SOURCE_DIR}/core/plugins/impl/groupNormalizationPlugin/*.cu
         ${PROJECT_SOURCE_DIR}/core/plugins/impl/deformAttnPlugin/*.cu
         ${PROJECT_SOURCE_DIR}/core/plugins/impl/LayerNormPlugin/*.cu
+        ${PROJECT_SOURCE_DIR}/core/plugins/impl/multiscaleDeformableAttnPlugin/*.cu
         )
 
 # ======================  torch_tensorrt core ============================

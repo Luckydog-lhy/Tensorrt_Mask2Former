@@ -103,7 +103,7 @@ class LayerNormGBPlugin: public nvinfer1::IPluginV2DynamicExt
         {
             case 0:
 //                res = (inOut[pos].type == DataType::kFLOAT);
-                res = (inOut[pos].type == nvinfer1::DataType::kFLOAT);break;
+                res = (inOut[pos].type == nvinfer1::DataType::kHALF or inOut[pos].type == nvinfer1::DataType::kFLOAT );break;
 //                std::cout<<"res: "<<res<<std::endl;
 
             case 1:

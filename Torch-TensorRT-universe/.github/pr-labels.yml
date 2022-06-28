@@ -1,0 +1,41 @@
+"component: torchtrtc":
+  - cpp/torchtrtc/**/*
+
+"component: api [C++]":
+  - cpp/**/*
+
+"component: api [Python]":
+  - py/**/*
+
+"component: core":
+  - core/**/*
+
+"component: conversion":
+  - core/conversion/**/*
+
+"component: converters":
+  - core/conversion/converters/**/*
+
+"component: evaluators":
+  - core/conversion/evaluators/**/*
+
+"component: partitioning":
+  - core/partitioning/**/*
+
+"component: runtime":
+  - core/runtime/**/*
+
+"component: lowering":
+  - core/lowering/**/*
+
+"component: tests":
+  - tests/**/*
+
+"component: build system":
+  - WORKSPACE
+  - BUILD
+
+"documentation":
+  - docs/**/*
+  - docsrc/**/*
+
