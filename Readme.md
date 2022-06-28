@@ -87,12 +87,20 @@
 
 ### 性能和精度对比
 
-|     模型     | Tensorrt版本 | GPU  | 精度类型 | 耗时  | 绝对误差 | 相对误差 |
-| :----------: | :----------: | :--: | :------: | :---: | :------: | :------: |
-| Torch_script |    8.4GA     | A10  |   FP32   | 326ms |    —     |    —     |
-|     Ours     |    8.4GA     | A10  |   FP32   | 283ms |   4e-2   |   6e-4   |
+在A10显卡下测试结果如下表所示：
 
+|    模型    |          Method           | 耗时/img | 绝对误差 | 相对误差 |
+| :--------: | :-----------------------: | :------: | :------: | :------: |
+| MaskFormer | trt8.4+torch_trt_universe | 262.25ms |   1e-1   |   4e-4   |
+| MaskFormer |        Pytorch10.2        | 322.03ms |    -     |    -     |
+|  Backbone  | trt8.4+torch_trt_universe |  5.37ms  |    -     |    -     |
+|  Backbone  |        Pytorch10.2        | 23.52ms  |    -     |    -     |
+|  Encoder   | trt8.4+torch_trt_universe | 24.58ms  |    -     |    -     |
+|  Encoder   |        Pytorch10.2        | 41.05ms  |    -     |    -     |
 
+备注：MaskFormer包括Backbone、Encoder、Decoder以及后处理，torch_trt_universe为个人维护的torch_tensorrt
+
+从上述运行优化结果可以看出，我们的模型在backbone上将推理时间从23.52ms提升到了5.37ms；在Encoder部分（deformable attention部分）将推理时间从41.05ms提升到了24.58ms，均实现了非常大幅度的提升；decoder部分由于trt算子内部的等待时间过长，很遗憾未能提供相应实验结果。
 
 ## 代码运行流程
 
