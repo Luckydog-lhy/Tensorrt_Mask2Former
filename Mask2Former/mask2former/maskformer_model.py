@@ -257,7 +257,7 @@ class MaskFormer(nn.Module):
             images_tensor_shape = images.tensor.shape
 
             if TRT:
-                features = self.backbone_trt(images_tensor.to(self.dtype ))
+                features = self.backbone_trt(images_tensor.to(self.dtype) )
             else:
                 features = self.backbone(images_tensor)
 
@@ -344,13 +344,15 @@ class MaskFormer(nn.Module):
                     return features_pad[0],features_pad[1],features_pad[2],features_pad[3],\
                            mask_flatten,reference_points
 
-                features = [feature.to(torch.float32) for feature in features]
+#                features = [feature.to(torch.float32) for feature in features]
                 sem_seg_head_inputs = prepare_inputs(*features)
 
                 if TRT:
+                    sem_seg_head_inputs = [feature.to(self.dtype) for feature in sem_seg_head_inputs]
                     multi_scale_features0, multi_scale_features1, multi_scale_features2, mask_features = self.sem_seg_encoder_trt(
                         *sem_seg_head_inputs)
                     sem_seg_encoder_outputs = [multi_scale_features0,multi_scale_features1,multi_scale_features2,mask_features ]
+                    sem_seg_encoder_outputs = [feature.to(torch.float32) for feature in sem_seg_encoder_outputs]
                     outputs = self.sem_seg_decoder_trt(*sem_seg_encoder_outputs)
                 else:
                     multi_scale_features0,multi_scale_features1,multi_scale_features2,mask_features = self.sem_seg_encoder(

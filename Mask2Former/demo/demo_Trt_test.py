@@ -23,7 +23,7 @@ from detectron2.utils.logger import setup_logger
 
 from mask2former import add_maskformer2_config
 from predictor import VisualizationDemo
-
+import numpy as np
 
 # constants
 WINDOW_NAME = "mask2former demo"
@@ -95,7 +95,7 @@ import torch
 def model_time(args,cfg,TRT) -> object:
     model = VisualizationDemo(cfg)
     img = read_image(args.input[0], format="BGR")
-    model.trace_model(img, TRT=TRT)
+    backbone_ori_time,backbone_trt_time,encoder_ori_time,encoder_trt_time = model.trace_model(img, TRT=TRT)
     for i in range(10):
         model.run_test(img,TRT=False)
 
@@ -108,19 +108,13 @@ def model_time(args,cfg,TRT) -> object:
         predictions = model.run_test(img,TRT=False)
         torch.cuda.synchronize()
         result_output.append(
-            predictions.data.cpu().detach().numpy()
+            predictions.cpu().detach().numpy()
         )
     end_time.record()
-    cost_time = start_time.elapsed_time(end_time)
-    logger.info(
-        "ori cost time {:.2f}ms".format(
-            cost_time,
-        )
-    )
-
+    ori_cost_time = start_time.elapsed_time(end_time)
     for i in range(10):
         model.run_test(img,TRT=True)
-    start_time, end_time = torch.cuda.Event(enable_timing=True), torch.cuda.Event(enable_timing=True)
+    start = time.time() 
     result_trt_output = []
     for path in tqdm.tqdm(args.input, disable=not args.output):
         # use PIL, to be consistent with evaluation
@@ -129,13 +123,37 @@ def model_time(args,cfg,TRT) -> object:
         result_trt_output.append(
             predictions.cpu().detach().numpy()
         )
-    end_time.record()
-    cost_time = start_time.elapsed_time(end_time)
+    cost_time = time.time() - start
     logger.info(
-        "trt cost time {:.2f}ms".format(
-            cost_time,
+        " all processes trt cost time {:.2f}ms/per  ori cost time {:.2f}ms/per".format(
+            cost_time*1000/len(args.input),ori_cost_time/len(args.input)
         )
     )
+    logger.info(
+        " trt backbone cost time {:.2f}ms/per  ori backbone cost time {:.2f}ms/per".format(
+            backbone_trt_time*1000/5,backbone_ori_time*1000/5
+        )
+    )
+    logger.info(
+        " trt encoder cost time {:.2f}ms/per  ori encoder cost time {:.2f}ms/per".format(
+            encoder_trt_time*1000/5,encoder_ori_time*1000/5
+        )
+    )
+    def check(a, b, weak=False, epsilon = 1e-5):
+      if weak:
+          res = np.all( np.abs(a - b) < epsilon )
+      else:
+          res = np.all( a == b )
+      diff0 = np.max(np.abs(a - b))
+      diff1 = np.median(np.abs(a - b) / (np.abs(b) + epsilon))
+    #print("check:",res,diff0,diff1)
+      return res,diff0,diff1
+
+    for a,b in zip(result_output,result_trt_output):
+       res,ch1,ch2 = check(a,b,True,5e-5) 
+       logger.info(
+       "error ch1 {},ch2 {}".format(ch1,ch2)
+       )
     return cost_time,result_output
 
 

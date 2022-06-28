@@ -1,14 +1,3 @@
-# -*- coding: utf-8 -*-
-# Copyright (c) Facebook, Inc. and its affiliates.
-
-"""
-This file contains components with some default boilerplate logic user may need
-in training / testing. They will not work for everyone, but many users may find them useful.
-
-The behavior of functions/classes in this file is subject to change,
-since they are meant to represent the "common default behavior" people need in their projects.
-"""
-
 import argparse
 import logging
 import os
@@ -297,7 +286,7 @@ class DefaultPredictor:
         self.input_format = cfg.INPUT.FORMAT
         assert self.input_format in ["RGB", "BGR"], self.input_format
 
-    def __call__(self, original_image):
+    def __call__(self, original_image,TRT):
         """
         Args:
             original_image (np.ndarray): an image of shape (H, W, C) (in BGR order).
@@ -318,7 +307,7 @@ class DefaultPredictor:
 
             inputs = {"image": image, "height": height, "width": width}
             # self.model.export_onnx([inputs])
-            predictions = self.model([inputs])[0]
+            predictions = self.model([inputs],TRT)[0]
             return predictions
     pass
 
@@ -339,19 +328,48 @@ class DefaultPredictor:
 
             run_dtype = torch.float32
             if TRT:
-                run_dtype = torch.float16
-                backbone_torchscrpit = torch_tensorrt.compile(backbone_torchscrpit,
+                """
+                run_dtype = torch.float32
+                backbone_trt = torch_tensorrt.compile(backbone_torchscrpit,
                     inputs = [
                         torch_tensorrt.Input(
                             min_shape = [1,3,400,400],
-                            opt_shape = [4,3,800,1344],
-                            max_shape = [8,3,800,1344],
-                            dtype = torch.float16
+                            opt_shape = [4,3,1344,800],
+                            max_shape = [8,3,1344,800],
+                            dtype = run_dtype
                         )
-                    ],
+                    ],enabled_precisions = {torch.float, torch.half}
                 )
-                self.model.dtype = torch.float16
-            features = backbone_torchscrpit(image.to(run_dtype) )
+                """
+                run_dtype = torch.half
+                backbone_trt = torch_tensorrt.compile(backbone_torchscrpit,
+                    inputs = [
+                        torch_tensorrt.Input(
+                            min_shape = [1,3,600,800],
+                            opt_shape = [4,3,1344,1344],
+                            max_shape = [8,3,1344,1344],
+                            dtype = run_dtype
+                        )
+                    ],enabled_precisions = {torch.float, torch.half}
+                )
+                self.model.dtype = run_dtype
+                self.model.backbone_trt = backbone_trt
+            for i in range(5):            
+              features = backbone_torchscrpit(image )
+              features = backbone_trt(image.to(run_dtype))            
+            import time
+            def run_time(model,inputs):
+              for i in range(5): 
+               features = model(*inputs)  
+               features = [feature.to(torch.float32) for feature in features]             
+            start = time.time()
+            run_time(backbone_torchscrpit,[image])
+            backbone_ori_time = time.time()-start
+            
+            start = time.time()
+            run_time(backbone_trt,[image.to(run_dtype)])
+            backbone_trt_time = time.time()-start
+
             features = [feature.to(torch.float32) for feature in features]
             self.model.backbone = backbone_torchscrpit
             self.model.use_trace_model = True
@@ -370,7 +388,10 @@ class DefaultPredictor:
                         spatial_shape = (h, w)
                         spatial_shapes.append(spatial_shape)
                     spatial_shapes = torch.as_tensor(spatial_shapes, dtype=torch.float32, device=features_pad[0].device)
-                    return self.sem_seg_encoder(features_pad,mask_flatten,level_start_index,spatial_shapes,reference_points)
+                    mask_features,multi_scale_features0,multi_scale_features1,multi_scale_features2 = \
+                        self.sem_seg_encoder(features_pad, mask_flatten, level_start_index, spatial_shapes,
+                                         reference_points)
+                    return multi_scale_features0,multi_scale_features1,multi_scale_features2,mask_features
 
                 def prepare_inputs(self,feature0,feature1,feature2,feature3):
                     feature0_max_size = [200, 336]
@@ -473,36 +494,55 @@ class DefaultPredictor:
                 torch.jit.trace(sem_seg_encoder, example_inputs = sem_seg_encoder_inputs, check_trace=False))
             if TRT:
                 sem_seg_encoder_torchscrpit.save(
-                    "/media/hongwei03/4E69B77F0E1A4357/TensorRT/Mask2Former/output/sem_seg_encoder_torchscrpit.pt")
+                    "/workspace/sem_seg_encoder_torchscrpit.pt")
                 sem_seg_encoder_torchscrpit = torch.jit.load(
-                    "/media/hongwei03/4E69B77F0E1A4357/TensorRT/Mask2Former/output/sem_seg_encoder_torchscrpit.pt")
-                sem_seg_encoder_torchscrpit = torch_tensorrt.compile(sem_seg_encoder_torchscrpit,
+                    "/workspace/sem_seg_encoder_torchscrpit.pt")
+                sem_seg_encoder_trt = torch_tensorrt.compile(sem_seg_encoder_torchscrpit,
                     inputs=[
                         torch_tensorrt.Input(
-                            min_shape=[1, 256, 200, 336],opt_shape=[1, 256, 200, 336],max_shape=[1, 256, 200, 336],dtype=torch.float32
+                            min_shape=[1, 256, 200, 336],opt_shape=[1, 256, 200, 336],max_shape=[1, 256, 200, 336],dtype=run_dtype
                         ),
                         torch_tensorrt.Input(
-                            min_shape=[1, 512, 100, 168],opt_shape=[1, 512, 100, 168],max_shape=[1, 512, 100, 168],dtype=torch.float32
+                            min_shape=[1, 512, 100, 168],opt_shape=[1, 512, 100, 168],max_shape=[1, 512, 100, 168],dtype=run_dtype
                         ),
                         torch_tensorrt.Input(
-                            min_shape=[1, 1024, 50, 84], opt_shape=[1, 1024, 50, 84],max_shape=[1, 1024, 50, 84],dtype=torch.float32
+                            min_shape=[1, 1024, 50, 84], opt_shape=[1, 1024, 50, 84],max_shape=[1, 1024, 50, 84],dtype=run_dtype
                         ),
                         torch_tensorrt.Input(
-                            min_shape=[1, 2048, 25, 42],opt_shape=[1, 2048, 25, 42],max_shape=[1, 2048, 25, 42],dtype=torch.float32
+                            min_shape=[1, 2048, 25, 42],opt_shape=[1, 2048, 25, 42],max_shape=[1, 2048, 25, 42],dtype=run_dtype
                         ),
                         torch_tensorrt.Input(
-                            min_shape=[1, 22050],opt_shape=[1, 22050],max_shape=[1, 22050],dtype=torch.float32
+                            min_shape=[1, 22050],opt_shape=[1, 22050],max_shape=[1, 22050],dtype=run_dtype
                         ),
                         torch_tensorrt.Input(
-                            min_shape=[1, 22050,3,2],opt_shape=[1, 22050,3,2],max_shape=[1, 22050,3,2],dtype=torch.float32
+                            min_shape=[1, 22050,3,2],opt_shape=[1, 22050,3,2],max_shape=[1, 22050,3,2],dtype=run_dtype
                         )
                     ],
-                    truncate_long_and_double = True,
+                    truncate_long_and_double = True,enabled_precisions = {torch.float, torch.half}
                     # debug = True
                 )
+
+                self.model.sem_seg_encoder_trt = sem_seg_encoder_trt
             self.model.sem_seg_encoder = sem_seg_encoder_torchscrpit
-            multi_scale_features0, multi_scale_features1, multi_scale_features2,mask_features \
-                = sem_seg_encoder_torchscrpit(*sem_seg_encoder_inputs)
+            for i in range(5):
+              multi_scale_features0, multi_scale_features1, multi_scale_features2,mask_features \
+                  = sem_seg_encoder_torchscrpit(*sem_seg_encoder_inputs)
+              features = sem_seg_encoder_trt(*[sem_seg_encoder_input.to(run_dtype) for sem_seg_encoder_input in sem_seg_encoder_inputs])
+
+            def run_time(model,inputs):
+              for i in range(5):
+               features = model(*inputs)
+#               features = [feature.to(torch.float32) for feature in features]
+            start = time.time()
+            run_time(sem_seg_encoder_torchscrpit,sem_seg_encoder_inputs)
+            encoder_ori_time = time.time()-start
+            
+            sem_seg_encoder_inputs_trt = [feature.to(run_dtype) for feature in sem_seg_encoder_inputs]
+            start = time.time()
+            run_time(sem_seg_encoder_trt,sem_seg_encoder_inputs_trt)
+            encoder_trt_time = end = time.time()-start
+
+
 
             ##============================  decoder trace ===============================##
             print("=================== trace sem_seg_decoder ======================")
@@ -510,8 +550,9 @@ class DefaultPredictor:
             sem_seg_decoder.eval()
             sem_seg_decoder_torchscrpit = torch.jit.freeze(
                 torch.jit.trace(sem_seg_decoder, example_inputs=[multi_scale_features0,multi_scale_features1,multi_scale_features2, mask_features], check_trace=True))
+            sem_seg_decoder_torchscrpit.save("/workspace/sem_seg_decoder_torchscrpit.pt")
             if TRT:
-                sem_seg_decoder_torchscrpit = torch_tensorrt.compile(sem_seg_decoder_torchscrpit,
+                sem_seg_decoder_trt = torch_tensorrt.compile(sem_seg_decoder_torchscrpit,
                     inputs=[
                         torch_tensorrt.Input(
                             min_shape=[1, 256, 25, 42],opt_shape=[1, 256, 25, 42],max_shape=[1, 256, 25, 42],     dtype=torch.float32
@@ -529,10 +570,13 @@ class DefaultPredictor:
                     truncate_long_and_double=True,
                     # debug = True
                 )
+                self.model.sem_seg_decoder_trt = sem_seg_decoder_trt
+            
             outputs = sem_seg_decoder_torchscrpit(multi_scale_features0, multi_scale_features1, multi_scale_features2,
                                                   mask_features)
             self.model.sem_seg_decoder = sem_seg_decoder_torchscrpit
-
+            
+            return backbone_ori_time,backbone_trt_time,encoder_ori_time,encoder_trt_time 
 class DefaultTrainer(TrainerBase):
     """
     A trainer with default training logic. It does the following:
@@ -928,3 +972,4 @@ for _attr in ["model", "data_loader", "optimizer"]:
             lambda self, value, x=_attr: setattr(self._trainer, x, value),
         ),
     )
+

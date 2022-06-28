@@ -76,12 +76,12 @@ class VisualizationDemo(object):
         return predictions, vis_output
 
 
-    def run_test(self, image):
-        predictions = self.predictor(image)
+    def run_test(self, image,TRT=False):
+        predictions = self.predictor(image,TRT)
         return predictions['sem_seg']
 
     def trace_model(self,image,TRT = False):
-        script_predictor = self.predictor.trace_model(image,TRT)
+        return self.predictor.trace_model(image,TRT)
         pass
 
 
