@@ -152,3 +152,7 @@
 
 
 
+## TensorRT  8.4 Bug 提交
+
+- 在TensorRT 8.4 环境下转换编译MaskerFormer的decoder模块会出现卡死或过长现象(超过6小时)，但是在cuda10.2，TensorRT 8.2的环境下编译正常，目前已将该模型和log已经提交给主办方。
+
