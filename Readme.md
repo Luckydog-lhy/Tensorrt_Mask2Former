@@ -149,6 +149,19 @@
 	```
 
 	（这里运行的测试结果为做5次前向的时间~）
+	
+	
+
+## 文件说明
+
+- Docker /workspace下主要文件夹说明
+	- 3rd_lib： 第三方包，包括TRT8.4，OpenCV等
+	- checkpoint：模型的对应权重
+	- test_img_new： 测试图片
+	- Mask2Former文件夹：模型接口的python代码
+	- Torch-TensorRT-universe文件夹：Torch_Tensorrt C++代码
+	- complite_lib：Torch_Tensorrt 编出来的so文件
+	- wenet：conda 环境
 
 
 
