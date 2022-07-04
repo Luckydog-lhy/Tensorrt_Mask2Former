@@ -159,7 +159,9 @@
 	- checkpoint：模型的对应权重
 	- test_img_new： 测试图片
 	- Mask2Former文件夹：模型接口的python代码
+		- Mask2Former/run_test.sh：测试精度脚本
 	- Torch-TensorRT-universe文件夹：Torch_Tensorrt C++代码
+		- Torch-TensorRT-universe/core/plugins/impl: plugin相关代码
 	- complite_lib：Torch_Tensorrt 编出来的so文件
 	- wenet：conda 环境
 
