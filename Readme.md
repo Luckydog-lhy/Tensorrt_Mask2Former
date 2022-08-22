@@ -119,7 +119,7 @@
 	
 	ROOT_DIR=$(cd "$(dirname "$0")";pwd)
 	
-	DOCKER_IMAGE="p517332051/nvidia_trt_testi:v1"
+	DOCKER_IMAGE="nvidia_trt_testi:v1"
 	
 	export NV_GPU="0,1,2,3,4,5,6,7"
 	
