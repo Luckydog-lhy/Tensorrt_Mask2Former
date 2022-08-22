@@ -107,7 +107,7 @@
 - 搭建docker运行环境
 
 	```shell
-	docker pull p517332051/nvidia_trt_test:v4
+	docker pull nvidia_trt_test:v4
 	```
 
 - 启动docker镜像
